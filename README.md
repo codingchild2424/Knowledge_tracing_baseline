@@ -1,4 +1,4 @@
-# DKT_baseline made by CoLA & EDM
+# Knowledge_tracing_baseline made by CoLA & EDM
 This code is Deep knowledge Tracing(DKT) baseline code for Learning Analytics(LA) and Educational Data Mining(EDM) researchers.
 
 And this code is made by CoLA & EDM(Community of Learning Analytics and Educational Data Mining), which is the research group of LA and EDM in South Korea.
@@ -14,7 +14,7 @@ Python files are program to initialize the DKT training and predicting.
 
 This program consist of 6 modules.
 
-1. model.py: DKT model
+1. dkt.py: DKT model
 
 2. trainer.py: class for training and validating
 
@@ -25,14 +25,6 @@ This program consist of 6 modules.
 5. utils.py: util class or functions
 
 6. model.pth: trained model files
-
-## jupyter file
-
-Jupyter file are made for learning and visualizing the DKT.
-
-Learner can check the result of all cells.
-
-Detail comment will be added.
 
 # Environments
 We use Docker environments for develop my code.
