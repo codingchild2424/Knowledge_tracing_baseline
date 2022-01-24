@@ -23,7 +23,7 @@ class Dkt(nn.Module):
             input_size = input_size, # input_size는 문항의 갯수(M)의 두배인 2M이어야 함
             hidden_size = hidden_size,
             num_layers = n_layers,
-            batch_first = False, # batch_first = True를 사용하면, batch 크기가 가장 먼저 나옴 / dataloader에 data가 들어가면 어차피 순서가 바뀌어서 batch_first를 False로 사용함
+            batch_first = False, # batch_first는 dataloader에서 반환되는 값에 맞춰서 False로 바꿈
             dropout = dropout_p
         )
         self.layers = nn.Sequential(
@@ -41,12 +41,12 @@ class Dkt(nn.Module):
 
     # forward method 정의
     def forward(self, x):
-        # |x| = (sequence_length, batch_size, hidden_size) = (sl, bs, hs)
+        # |x| = (sequence_length, batch_size, hidden_size) = (sq, bs, hs)
         # rnn의 ouput으로는 output 결과물과 함께 (h_n)이 나옴 / (h_n): final hidden state for each element in the batch
         # 뒤는 필요없으므로, _로 무시함
         z, _ = self.rnn(x)
-        # |z| = (sequence_length, batch_size, hidden_size)
+        # |z| = (sq, bs, hs)
         # z는 모든 time step의 결과를 가져옴
         y = self.layers(z)
-        # |y| = (batch_size, int(input_size / 2))
+        # |y| = (sq, bs, hs)
         return y

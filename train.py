@@ -29,6 +29,9 @@ def define_argparser():
 
     p.add_argument('--dataset', type=str, default = 'assist2015')
 
+    p.add_argument('--model', type=str, default='dkt')
+    p.add_argument('--optimizer', type=str, default='adam')
+
     config = p.parse_args()
 
     return config
@@ -58,17 +61,27 @@ def main(config):
     hidden_size = 50
 
     #model 선언
-    model = Dkt(input_size = input_size, hidden_size = hidden_size)
+    if config.model == 'dkt':
+        model = Dkt(input_size = input_size, hidden_size = hidden_size)
+    #--> 다른 모델이 추가되면 여기에 설정
+
     #model의 구조 보여주기
     print(model)
+    #모델 device에 올리기
     model = model.to(device)
-    optimizer = optim.Adam(model.parameters())
+
+    #optimizer 선언
+    if config.optimizer == 'adam':
+        #optimizer는 Adam으로 설정
+        optimizer = optim.Adam(model.parameters())
+    #--> 다른 모델이 추가되면 여기에 설정
+    
     #crit을 통해 utils.py에 있는 loss_function()을 받아옴
     crit = utils.loss_function
 
-    #device를 하나 더 받도록 만듬
+    #trainer 선언
     trainer = Trainer(model, optimizer, crit, device, dataset.data_path)
-
+    #train 시작
     trainer.train(train_data, test_data, config)
 
     #Save best model weights.

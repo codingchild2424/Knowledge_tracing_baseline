@@ -14,22 +14,12 @@ class Utils:
 
     def __init__(self, DATA_DIR, device):
         self.data_path = DATA_DIR
-        #해당 부분을 간결하게 만들 수 있도록 정의해보기
-        self.data_pd = pd.read_csv(self.data_path)
-        self.data_np = self.data_pd.loc[:, ['user_id', 'sequence_id', 'correct']].to_numpy().astype(np.int64)
-        #각각의 인스턴스 정의
-        self.users = self.data_np[:, 0]
-        self.ques = self.data_np[:, 1]
-        self.reses = self.data_np[:, 2]
-        #self.n_user_list: 중복되지 않은 학생의 수만 담은 변수
-        self.n_user_list = np.unique(self.users, return_counts = True)[0].shape[0]
-        #self.n_que_list: 중복되지 않은 문항의 수만 담은 변수
-        self.n_que_list = np.unique(self.ques, return_counts=True)[0].shape[0]
-        #self.user_list: 중복되지 않은 학생들의 목록
-        self.user_list = np.unique(self.users)
-        #self.que_list: 중복되지 않은 문항들의 목록
-        self.que_list = np.unique(self.ques)
         self.device = device
+
+        #초기 인스턴스를 preprocess()를 통해 받아옴
+        self.data_pd, self.data_np, self.users, \
+            self.ques, self.reses, self.n_user_list, \
+            self.n_que_list, self.user_list, self.que_list = self.preprocess()
 
     #data와 예측값 y_hat_i
     def y_true_and_score(self, data, y_hat_i):
@@ -41,17 +31,17 @@ class Utils:
         #y_true에 들어가는 것은 정답값임
         #이 중에서 correct[1:]은 가장 첫번째 정답값을 제하고, 두번째 정답부터 끝까지를 담고 있음
         #mask[1:]을 통해 해당 문항이 정답인지 오답인지를 담고 있는 값을 만들 수 있음 -> 값은 정답이면 1, 아니면 0을 담고 있음
-        y_true = torch.masked_select(correct[1:], mask[1:])
+        y_true = torch.masked_select(correct[1:, :, :], mask[1:, :, :])
         #y_hat_i의 값은 각각 한칸 뒤의 문항에 대한 정답률을 추정하는 확률값임
         #따라서 y_hat_i[:-1]를 통해 마지막 값은 무시하면 두번째 문항부터 마지막 문항까지 예측 확률값을 알 수 있음
         #그래서 mask[1:]을 사용하면, 2번 문항부터의 문항번호를 알 수 있기에 해당 문항의 예측 확률값만 얻을 수 있음
-        y_score = torch.masked_select(y_hat_i[:-1], mask[1:])
+        y_score = torch.masked_select(y_hat_i[:-1, :, :], mask[1:, :, :])
 
         return y_true, y_score
 
     def loss_function(self, y_hat, data):
         eps = 1e-8
-        #delta는 target이 총 길이가 n_items * 2인데, 
+        #delta는 target이 총 길이가 n_items * 2인데,  
         #이 중에서 앞에 있는 절반([:, :, self.n_que_list])과
         #뒤에 있는 절반([:, :, self.n_que_list:])을 합치는 것
         #delta는 결국 one-hot encoding이지만, 차원은 n_itmes임
@@ -78,7 +68,26 @@ class Utils:
         #이것을 axis -1 방향으로 더함
         #그러면 해당 문항의 bce 값을 알 수 있고, 모든 문항에 대한 확률값을 알 수 있음
         bce = (bce*delta).sum(axis=-1)
-        
+
         #최종 반환 값에서 bce를 mask를 통해 모두 선택하고, 이를 평균내어 반환함
         return torch.masked_select(bce, mask).mean()
+
+    def preprocess(self):
+
+        data_pd = pd.read_csv(self.data_path)
+        data_np = data_pd.loc[:, ['user_id', 'sequence_id', 'correct']].to_numpy().astype(np.int64)
+        #각각의 인스턴스 정의
+        users = data_np[:, 0]
+        ques = data_np[:, 1]
+        reses = data_np[:, 2]
+        #self.n_user_list: 중복되지 않은 학생의 수만 담은 변수
+        n_user_list = np.unique(users, return_counts = True)[0].shape[0]
+        #self.n_que_list: 중복되지 않은 문항의 수만 담은 변수
+        n_que_list = np.unique(ques, return_counts=True)[0].shape[0]
+        #self.user_list: 중복되지 않은 학생들의 목록
+        user_list = np.unique(users)
+        #self.que_list: 중복되지 않은 문항들의 목록
+        que_list = np.unique(ques)
+
+        return data_pd, data_np, users, ques, reses, n_user_list, n_que_list, user_list, que_list
 

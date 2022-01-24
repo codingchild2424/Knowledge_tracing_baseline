@@ -4,12 +4,9 @@ import numpy as np
 from sklearn import metrics
 
 import torch
-import torch.nn.functional as F
-import torch.optim as optim
+from torch.utils.data import DataLoader
 
 from tqdm import tqdm
-
-from torch.utils.data import DataLoader
 
 #utils에서 collate를 가져옴
 from utils import Utils
@@ -24,7 +21,7 @@ class Trainer():
         self.device = device
         self.data_path = data_path
 
-        super().__init__()
+        super().__init__()     
 
     #_train
     def _train(self, train_data, config):
@@ -46,14 +43,15 @@ class Trainer():
 
         # train_loader에서 미니배치가 반환됨
         for data in tqdm(train_loader, ascii = True, desc = 'train: '):
-            #여기서 data를 device에 올리기
-            data = data.to(self.device)
-            y_hat_i = self.model(data) #|y_hat_i| 
+            #data를 device에 올리기
+            data = data.to(self.device) #|data| = (sq, bs, input_size)
+            y_hat_i = self.model(data) #|y_hat_i| = (sq, bs, input_size/2)
             self.optimizer.zero_grad()
-            #loss를 구하기 위해서는 반환된 값의 차원(n_items)과 다음 값의 차원(n_items / 2)로 설정해서 비교해야함
-            #따라서 mask를 씌우는 작업이 필요함
-            #해당 기능은 loss_function에서 구현함
-            loss = self.crit(y_hat_i[:-1], data[1:])
+
+            #crit은 loss_function임(utils.py 확인)
+            #y_hat_i의 각각의 sq는 다음번 sq를 예측하는 확률값을 반환하므로, 처음~마지막-1까지의 값을 반환함
+            #data는 처음+1부터 마지막까지의 값을 넣어줌
+            loss = self.crit(y_hat_i[:-1, :, :], data[1:, :, :]) #|y_hat_i[:-1, :, :]| = (sq - 1, bs, input_size/2), |data[1:, :, :]| = (sq - 1, bs, input_size)
             loss.backward()
             self.optimizer.step()
             #y_true값과 y_score값을 계산
@@ -73,9 +71,10 @@ class Trainer():
 
     #_test
     def _test(self, test_data, config):
+        #평가모드
         self.model.eval()
 
-        # validate 데이터 shuffle하기
+        #validate 데이터 shuffle하기
         test_loader = DataLoader(
             dataset = test_data,
             batch_size = config.batch_size, #batch_size는 config에서 받아옴
@@ -92,11 +91,12 @@ class Trainer():
 
         with torch.no_grad():
             for data in tqdm(test_loader, ascii = True, desc = 'valid: '):
-                data = data.to(self.device)
-                y_hat_i = self.model(data)
-                loss = self.crit(y_hat_i[:-1], data[1:])
+                #data를 device에 올리기
+                data = data.to(self.device) #|data| = (sq, bs, input_size)
+                y_hat_i = self.model(data) #|y_hat_i| = (sq, bs, input_size/2)
+                loss = self.crit(y_hat_i[:-1, :, :], data[1:, :, :])
                 #y_true값과 y_score값을 계산
-                y_true, y_score = utils.y_true_and_score(data, y_hat_i)
+                y_true, y_score = utils.y_true_and_score(data, y_hat_i) #|y_hat_i[:-1, :, :]| = (sq - 1, bs, input_size/2), |data[1:, :, :]| = (sq - 1, bs, input_size)
 
                 y_trues.append(y_true)
                 y_scores.append(y_score)
@@ -112,8 +112,6 @@ class Trainer():
 
     # _train과 _validate를 활용해서 train함
     def train(self, train_data, test_data, config):
-
-        print("========================Train Start===========================")
 
         highest_auc_score = 0
         best_model = None
@@ -140,7 +138,6 @@ class Trainer():
                 highest_auc_score,
             ))
 
-        print("========================Train Finish===========================")
         print("\n")
         print("The Highest_Auc_Score in Training Session is %.4f" % (
                 highest_auc_score,

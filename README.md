@@ -18,13 +18,11 @@ This program consist of 6 modules.
 
 2. trainer.py: class for training and validating
 
-3. predict.py: class for predicting
+3. train.py: main file
 
-4. train.py: main file
+4. utils.py: util class or functions
 
-5. utils.py: util class or functions
-
-6. model.pth: trained model files
+5. model.pth: trained model files
 
 # Environments
 We use Docker environments for develop my code.
